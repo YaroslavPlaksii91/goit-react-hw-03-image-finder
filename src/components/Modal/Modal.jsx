@@ -30,7 +30,7 @@ class Modal extends Component {
     return createPortal(
       <div className={s.overlay} onClick={this.handleBackdropClick}>
         <div className={s.modal}>
-          <img src={this.props.url} alt="" width={800} />
+          <img src={this.props.src} alt="" width={800} />
         </div>
       </div>,
       modalRoot,
@@ -40,7 +40,7 @@ class Modal extends Component {
 
 Modal.propTypes = {
   onClose: PropTypes.func.isRequired,
-  url: PropTypes.string.isRequired,
+  src: PropTypes.string.isRequired,
 };
 
 export default Modal;

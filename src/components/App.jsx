@@ -3,48 +3,49 @@ import Searchbar from './Searchbar';
 import ImageGallery from './ImageGallery';
 import Button from './Button';
 import Modal from './Modal';
-import imagesApi from 'services/images-api';
+import { fetchImagesAPI } from 'services/images-api';
 import Loader from 'react-js-loader';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-const api = new imagesApi();
-
 class App extends Component {
   state = {
     images: [],
-    query: '',
+    searchQuery: '',
+    currentPage: 1,
     error: null,
     isLoading: false,
-    showModal: false,
-    url: '',
+    selectedImage: '',
   };
 
-  async componentDidUpdate(prevProps, prevState) {
-    if (prevState.query !== this.state.query) {
-      try {
-        this.setState({ isLoading: true });
-        api.resetPage();
-        api.searchQuery = this.state.query;
-        const images = await api.fetchImages();
-        this.setState({ images });
-        if (images.length === 0) return toast.warn('Sorry, no such images.');
-      } catch (error) {
-        this.setState({ error });
-      } finally {
-        this.setState({ isLoading: false });
-      }
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.searchQuery !== this.state.searchQuery) {
+      this.fetchImages();
     }
   }
 
-  onLoadMoreClick = async () => {
+  onFormSubmit = query => {
+    this.setState({
+      searchQuery: query,
+      currentPage: 1,
+      images: [],
+      error: null,
+    });
+  };
+
+  fetchImages = async () => {
     try {
+      const { currentPage, searchQuery } = this.state;
+
       this.setState({ isLoading: true });
-      api.incrementPage();
-      const images = await api.fetchImages();
+
+      const images = await fetchImagesAPI(searchQuery, currentPage);
       this.setState(prevState => ({
         images: [...prevState.images, ...images],
+        currentPage: prevState.currentPage + 1,
       }));
+
+      if (images.length === 0) return toast.warn('Sorry, no such images.');
     } catch (error) {
       this.setState({ error });
     } finally {
@@ -52,19 +53,10 @@ class App extends Component {
     }
   };
 
-  onFormSubmit = query => {
-    this.setState({ query });
-  };
-
-  toggleModal = url => {
-    this.setState(({ showModal }) => ({
-      showModal: !showModal,
-      url,
-    }));
-  };
+  toggleModal = (src = '') => this.setState({ selectedImage: src });
 
   render() {
-    const { images, url, showModal, isLoading, error } = this.state;
+    const { images, isLoading, error, selectedImage } = this.state;
 
     return (
       <div
@@ -75,14 +67,18 @@ class App extends Component {
           paddingBottom: '24px',
         }}
       >
-        {error && <div>{error.message}</div>}
+        {error && <p>{error.message}</p>}
+
         <Searchbar onSubmit={this.onFormSubmit} />
         <ImageGallery images={images} showModal={this.toggleModal} />
         {isLoading && <Loader type="bubble-loop" size={60} bgColor="blue" />}
         {images.length > 0 && !isLoading && (
-          <Button onClick={this.onLoadMoreClick} />
+          <Button onClick={this.fetchImages}>Load more</Button>
         )}
-        {showModal && <Modal onClose={this.toggleModal} url={url} />}
+
+        {selectedImage && (
+          <Modal onClose={this.toggleModal} src={selectedImage} />
+        )}
         <ToastContainer autoClose={3000} />
       </div>
     );
